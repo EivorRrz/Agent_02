@@ -3,18 +3,55 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Metadata, Table, Column } from './src/models/Metadata.js';
+import { MySQLGenerator } from './src/generators/MySQLGenerator.js';
+import { ensureFolders } from './src/utils/folderOrganizer.js';
+import { readJSON } from './src/utils/fileUtils.js';
+import config from './src/config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const fileId = process.argv[2] || '1769450257490';
-const artifactPath = path.join(__dirname, '../Phase-1/src/artifacts', fileId);
+const fileId = process.argv[2];
+if (!fileId) {
+    console.error('❌ Error: Missing file ID');
+    console.log('\nUsage: node generate.js <fileId>');
+    console.log('Example: node generate.js 1769680051445');
+    process.exit(1);
+}
+
+const artifactPath = path.join(__dirname, '../Phase-1/artifacts', fileId);
 const metadataPath = path.join(artifactPath, 'json/metadata.json');
-const outputPath = path.join(artifactPath, 'executive/DATA_MODEL_DUAL_ENHANCED.html');
+const executiveDir = path.join(artifactPath, 'executive');
+const logicalDir = path.join(artifactPath, 'logical');
+const outputPath = path.join(executiveDir, 'DATA_MODEL_DUAL_ENHANCED.html');
 
 console.log('\n🚀 UNIVERSAL DATA MODEL GENERATOR\n');
+console.log(`File ID: ${fileId}`);
+console.log(`Looking for metadata at: ${metadataPath}`);
+
+// Ensure executive directory exists
+if (!fs.existsSync(executiveDir)) {
+    fs.mkdirSync(executiveDir, { recursive: true });
+    console.log(`✓ Created executive directory: ${executiveDir}`);
+}
 
 if (!fs.existsSync(metadataPath)) {
-    console.error('❌ Metadata file not found!');
+    console.error('\n❌ Metadata file not found!');
+    console.error(`   Expected path: ${metadataPath}`);
+    console.error(`   Artifact directory exists: ${fs.existsSync(artifactPath)}`);
+    if (fs.existsSync(artifactPath)) {
+        console.error(`   Contents of artifact directory:`);
+        try {
+            const contents = fs.readdirSync(artifactPath);
+            contents.forEach(item => {
+                const itemPath = path.join(artifactPath, item);
+                const isDir = fs.statSync(itemPath).isDirectory();
+                console.error(`     ${isDir ? '📁' : '📄'} ${item}`);
+            });
+        } catch (err) {
+            console.error(`     Error reading directory: ${err.message}`);
+        }
+    }
     process.exit(1);
 }
 
@@ -672,15 +709,87 @@ fs.writeFileSync(outputPath, htmlTemplate);
 const sizeKB = (fs.statSync(outputPath).size / 1024).toFixed(1);
 console.log(`✅ Generated: DATA_MODEL_DUAL_ENHANCED.html (${sizeKB} KB)\n`);
 
-console.log('🎯 Universal Features:');
-console.log('   ✓ Hierarchical navigation (Domain → SubDomain → Entity)');
-console.log('   ✓ Smooth inertial scrolling');
-console.log('   ✓ Crow\'s foot relationships (behind boxes)');
-console.log('   ✓ Full canvas scrolling (left/right/up/down)');
-console.log('   ✓ Toggle Physical/Logical models');
-console.log('   ✓ Click entity to auto-focus diagram');
-console.log('   ✓ Zoom in/out with smooth curves');
-console.log('   ✓ 15,000×12,000px canvas for full exploration\n');
-
-console.log(`📁 Output: ${outputPath}`);
-console.log('   Ready to use - Open in browser!');
+// Generate MySQL DDL and cleanup
+(async () => {
+    // Generate MySQL DDL
+    console.log('📝 Generating MySQL DDL...');
+    try {
+        // Load metadata for DDL generation
+        const rawData = await readJSON(metadataPath);
+        const metadata = new Metadata(fileId);
+        const tablesData = rawData.metadata?.tables || {};
+        
+        for (const [tableName, tableInfo] of Object.entries(tablesData)) {
+            const table = new Table(tableName, tableInfo.entityDescription || tableInfo.description);
+            
+            for (const colData of tableInfo.columns || []) {
+                const column = new Column({
+                    name: colData.columnName || colData.attributeName,
+                    dataType: colData.dataType || 'VARCHAR',
+                    isPrimaryKey: colData.isPrimaryKey || false,
+                    isForeignKey: colData.isForeignKey || false,
+                    isNullable: colData.nullable !== false,
+                    isUnique: colData.isUnique || false,
+                    defaultValue: colData.defaultValue,
+                    referencesTable: colData.referencesTable,
+                    referencesColumn: colData.referencesColumn,
+                    description: colData.description || colData.attributeDescription
+                });
+                table.addColumn(column);
+            }
+            
+            metadata.addTable(table);
+        }
+        
+        // Ensure folders exist - use correct artifact path
+        const physicalDir = path.join(artifactPath, 'physical');
+        if (!fs.existsSync(physicalDir)) {
+            fs.mkdirSync(physicalDir, { recursive: true });
+        }
+        
+        // Generate MySQL SQL DDL
+        const mysqlGen = new MySQLGenerator(metadata, physicalDir);
+        const sqlPath = await mysqlGen.save('mysql.sql');
+        
+        const sqlSizeKB = (fs.statSync(sqlPath).size / 1024).toFixed(1);
+        console.log(`✅ Generated: mysql.sql (${sqlSizeKB} KB)`);
+        console.log(`   Location: ${sqlPath}\n`);
+    } catch (error) {
+        console.error(`⚠️  DDL generation failed: ${error.message}`);
+        console.error(`   Continuing with HTML generation only...\n`);
+    }
+    
+    // Remove empty logical folder if it exists
+    try {
+        if (fs.existsSync(logicalDir)) {
+            const logicalContents = fs.readdirSync(logicalDir);
+            if (logicalContents.length === 0) {
+                fs.rmdirSync(logicalDir);
+                console.log(`✓ Removed empty logical folder\n`);
+            }
+        }
+    } catch (error) {
+        // Ignore errors when removing folder
+    }
+    
+    console.log('🎯 Universal Features:');
+    console.log('   ✓ Hierarchical navigation (Domain → SubDomain → Entity)');
+    console.log('   ✓ Smooth inertial scrolling');
+    console.log('   ✓ Crow\'s foot relationships (behind boxes)');
+    console.log('   ✓ Full canvas scrolling (left/right/up/down)');
+    console.log('   ✓ Toggle Physical/Logical models');
+    console.log('   ✓ Click entity to auto-focus diagram');
+    console.log('   ✓ Zoom in/out with smooth curves');
+    console.log('   ✓ 15,000×12,000px canvas for full exploration\n');
+    
+    console.log(`📁 Output Files:`);
+    console.log(`   • Interactive HTML: ${outputPath}`);
+    const sqlPath = path.join(artifactPath, 'physical', 'mysql.sql');
+    if (fs.existsSync(sqlPath)) {
+        console.log(`   • MySQL DDL: ${sqlPath}`);
+    }
+    console.log('\n   Ready to use - Open HTML in browser!');
+})().catch(error => {
+    console.error(`\n❌ Error: ${error.message}`);
+    process.exit(1);
+});

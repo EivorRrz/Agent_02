@@ -116,46 +116,8 @@ router.post('/logical/:fileId', async (req, res) => {
             });
         }
         
-        // Step 3: Generate Production Diagrams (Graphviz → DBML CLI fallback)
-        try {
-            const dbmlPath = path.join(config.storage.artifactsDir, fileId, 'dbml', 'schema.dbml');
-            const { existsSync } = await import('fs');
-            
-            if (existsSync(dbmlPath)) {
-                logger.info({ fileId }, 'Generating ERD diagrams (Graphviz → DBML fallback)...');
-                const { generateProductionDiagrams } = await import('../generators/productionDiagramGenerator.js');
-                const diagramResults = await generateProductionDiagrams(fileId, dbmlPath);
-                
-                results.generated.images = {
-                    png: diagramResults.png,
-                    svg: diagramResults.svg,
-                    pdf: diagramResults.pdf
-                };
-                results.generated.generator = diagramResults.generator;
-                results.generated.schemaSize = diagramResults.schemaSize;
-                
-                if (diagramResults.errors.length > 0) {
-                    results.errors.push(...diagramResults.errors);
-                }
-                
-                logger.info({ 
-                    fileId, 
-                    generator: diagramResults.generator,
-                    schemaSize: diagramResults.schemaSize 
-                }, '✅ ERD diagrams generated successfully');
-            } else {
-                results.errors.push({
-                    type: 'images',
-                    error: 'DBML file not found. Generate DBML first.'
-                });
-            }
-        } catch (error) {
-            logger.error({ error: error.message, fileId }, '❌ Diagram generation failed');
-            results.errors.push({
-                type: 'images',
-                error: error.message
-            });
-        }
+        // Step 3: Diagram generation removed - only Interactive HTML viewer is used
+        logger.info({ fileId }, 'Skipping static diagram generation (PNG/SVG/PDF) - using Interactive HTML viewer only');
         
         // Return results
         const status = results.errors.length === 0 ? 'success' : 'partial';
@@ -170,11 +132,7 @@ router.post('/logical/:fileId', async (req, res) => {
             artifacts: {
                 logical: {
                     dbml: results.generated.dbml?.path || null,
-                    erd_png: results.generated.images?.png || null,
-                    erd_svg: results.generated.images?.svg || null,
-                    erd_pdf: results.generated.images?.pdf || null,
-                    generator: results.generated.generator || null,
-                    schemaSize: results.generated.schemaSize || null
+                    note: 'Static diagrams (PNG/SVG/PDF) removed - use Interactive HTML viewer instead'
                 }
             },
             errors: results.errors.length > 0 ? results.errors : undefined
@@ -379,41 +337,8 @@ router.post('/:fileId', async (req, res) => {
             });
         }
         
-        // Step 3: Generate Production Diagrams (Graphviz → DBML CLI fallback)
-        try {
-            const dbmlPath = path.join(config.storage.artifactsDir, fileId, 'dbml', 'schema.dbml');
-            const { existsSync } = await import('fs');
-            
-            if (existsSync(dbmlPath)) {
-                logger.info({ fileId }, 'Generating production diagrams (Graphviz → DBML fallback)...');
-                const { generateProductionDiagrams } = await import('../generators/productionDiagramGenerator.js');
-                const diagramResults = await generateProductionDiagrams(fileId, dbmlPath);
-                
-                results.generated.images = {
-                    png: diagramResults.png,
-                    svg: diagramResults.svg,
-                    pdf: diagramResults.pdf
-                };
-                results.generated.generator = diagramResults.generator;
-                results.generated.schemaSize = diagramResults.schemaSize;
-                
-                if (diagramResults.errors.length > 0) {
-                    results.errors.push(...diagramResults.errors);
-                }
-                
-                logger.info({ 
-                    fileId, 
-                    generator: diagramResults.generator,
-                    schemaSize: diagramResults.schemaSize 
-                }, '✅ Production diagrams generated successfully');
-            }
-        } catch (error) {
-            logger.error({ error: error.message, fileId }, '❌ Diagram generation failed');
-            results.errors.push({
-                type: 'images',
-                error: error.message
-            });
-        }
+        // Step 3: Diagram generation removed - only Interactive HTML viewer is used
+        logger.info({ fileId }, 'Skipping static diagram generation (PNG/SVG/PDF) - using Interactive HTML viewer only');
         
         // Step 4: Generate Physical Models (Phase-2) - Use generate-complete.js
         try {

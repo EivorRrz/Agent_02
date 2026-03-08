@@ -1,10 +1,11 @@
 /**
- * LLM-Enhanced Physical Model Generator
- * Uses LLM to infer exact SQL types, constraints, defaults, and business rules
+ * LLM-Enhanced Physical Model Generator (LangChain)
+ * Uses LangChain to infer exact SQL types, constraints, defaults, and business rules
  */
 
 import logger from '../utils/logger.js';
-import { promptJSON, isLlmReady, Initializellm } from '../../../Phase-1/src/llm/llmService.js';
+import { callLangChainWithSchema, initializeLangChain, isLangChainReady } from '../../../Phase-1/src/llm/azureLangChainService.js';
+import { z } from 'zod';
 
 /**
  * Build context prompt for LLM to analyze physical model requirements
@@ -35,22 +36,41 @@ function buildPhysicalModelPrompt(metadata) {
 }
 
 /**
- * Analyze metadata with LLM to infer physical model details
+ * Create Zod schema for physical model enhancement
+ */
+function createPhysicalModelSchema() {
+    return z.object({
+        tables: z.record(z.string(), z.object({
+            columns: z.record(z.string(), z.object({
+                exactType: z.string().describe("Exact SQL data type with precision (e.g., VARCHAR(255), INT)"),
+                nullable: z.boolean().describe("Whether column allows NULL values"),
+                unique: z.boolean().optional().describe("Whether column has UNIQUE constraint"),
+                default: z.string().nullable().optional().describe("Default value (e.g., 'CURRENT_TIMESTAMP', 'active')"),
+                checkConstraint: z.string().nullable().optional().describe("CHECK constraint expression (without CHECK keyword)"),
+                autoIncrement: z.boolean().optional().describe("Whether column has AUTO_INCREMENT"),
+                cleanName: z.string().optional().describe("Cleaned column name (remove leading underscores)"),
+            })),
+        })),
+    });
+}
+
+/**
+ * Analyze metadata with LangChain to infer physical model details
  */
 export async function enhancePhysicalModelWithLLM(metadata) {
-    if (!isLlmReady()) {
+    if (!isLangChainReady()) {
         try {
-            logger.info("LLM not ready. Initializing...");
-            await Initializellm();
+            logger.info("LangChain not ready. Initializing...");
+            await initializeLangChain();
         } catch (error) {
-            logger.warn({ error: error.message }, "LLM not available, using heuristics only");
+            logger.warn({ error: error.message }, "LangChain not available, using heuristics only");
             return metadata; // Return original metadata if LLM fails
         }
     }
     
     const contextPrompt = buildPhysicalModelPrompt(metadata);
     
-    const analysisPrompt = `${contextPrompt}
+    const promptTemplate = `{context}
 
 TASK: Analyze this database schema and provide EXACT physical SQL implementation details.
 
@@ -107,31 +127,21 @@ For EACH column in EACH table, determine:
    - Remove leading underscores (_customer_id → customer_id)
    - Use standard SQL naming conventions
 
-Return JSON in this format:
-{
-  "tables": {
-    "table_name": {
-      "columns": {
-        "column_name": {
-          "exactType": "VARCHAR(255)",
-          "nullable": false,
-          "unique": true,
-          "default": "CURRENT_TIMESTAMP",
-          "checkConstraint": "email LIKE '%@%.%'",
-          "autoIncrement": false,
-          "cleanName": "customer_id"
-        }
-      }
-    }
-  }
-}`;
+{formatInstructions}`;
 
     try {
-        logger.info('Sending metadata to LLM for physical model enhancement...');
-        const result = await promptJSON(analysisPrompt);
+        logger.info('Sending metadata to LangChain for physical model enhancement...');
+        
+        const schema = createPhysicalModelSchema();
+        const result = await callLangChainWithSchema(
+            schema,
+            promptTemplate,
+            { context: contextPrompt },
+            { timeout: 45000, maxRetries: 3 }
+        );
         
         if (!result || !result.tables) {
-            logger.warn('No valid JSON response from LLM. Using heuristics only.');
+            logger.warn('No valid response from LangChain. Using heuristics only.');
             return metadata;
         }
         
@@ -139,7 +149,7 @@ Return JSON in this format:
         return mergeLLMPhysicalEnhancements(metadata, result);
         
     } catch (error) {
-        logger.warn({ error: error.message }, 'LLM physical model enhancement failed, using heuristics only');
+        logger.warn({ error: error.message }, 'LangChain physical model enhancement failed, using heuristics only');
         return metadata; // Return original metadata if LLM fails
     }
 }

@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 import { getMetadata } from './src/storage/fileStorage.js';
 import { generateDBML, saveDBML } from './src/generators/dbmlGenerator.js';
 import { ensureFolders } from './src/utils/folderOrganizer.js';
-import { generateProductionDiagrams } from './src/generators/productionDiagramGenerator.js';
+// Diagram generation removed - only Interactive HTML viewer is used
 import { writeFile } from 'fs/promises';
 import config from './src/config/index.js';
 import { mapToLogicalType } from './src/generators/logicalTypeMapper.js';
@@ -104,32 +104,12 @@ async function generateLogical(fileId) {
                 throw new Error('DBML file not found. Generate DBML first.');
             }
             
-            // Use production diagram generator (Graphviz → DBML CLI fallback)
-            const diagramResults = await generateProductionDiagrams(fileId, dbmlPath);
-            
-            // Copy diagrams to logical/ folder
-            const { copyFile } = await import('fs/promises');
-            const logicalPngPath = path.join(paths.logical, 'erd.png');
-            const logicalSvgPath = path.join(paths.logical, 'erd.svg');
-            
-            if (diagramResults.png) {
-                await copyFile(diagramResults.png, logicalPngPath);
-                results.files.push({ name: 'erd.png', path: logicalPngPath, generator: diagramResults.generator });
-                success(`erd.png (${diagramResults.generator})`);
-            }
-            
-            if (diagramResults.svg) {
-                await copyFile(diagramResults.svg, logicalSvgPath);
-                results.files.push({ name: 'erd.svg', path: logicalSvgPath, generator: diagramResults.generator });
-                success(`erd.svg (${diagramResults.generator})`);
-            }
-            
-            if (diagramResults.errors.length > 0) {
-                results.errors.push(...diagramResults.errors);
-            }
+            // Diagram generation removed - only Interactive HTML viewer is used
+            console.log('  ⏭️  Skipping static diagram generation (PNG/SVG/PDF)');
+            console.log('  ℹ️  Use Interactive HTML viewer instead: artifacts/' + fileId + '/executive/erd_INTERACTIVE.html');
         } catch (err) {
-            error(`ERD generation failed: ${err.message}`);
-            results.errors.push({ type: 'erd', error: err.message });
+            // Ignore diagram generation errors since we're not generating them
+            console.log('  ⏭️  Diagram generation skipped');
         }
         console.log();
         

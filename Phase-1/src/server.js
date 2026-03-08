@@ -12,6 +12,7 @@ import config from "./config/index.js";
 import uploadRouter from "./middleware/upload.js";
 import generateRouter from "./routes/generate.js";//for generating the artifacts..!
 import { Initializellm, getLLMStatus } from "./llm/index.js";
+import { startFileWatcher } from "./utils/fileWatcher.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,7 +29,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
     req.setTimeout(300000); // 5 minutes
     res.setTimeout(300000); // 5 minutes
-    
+
     // Log all requests for debugging
     if (req.path.includes('/upload')) {
         logger.info({
@@ -39,12 +40,12 @@ app.use((req, res, next) => {
             hasBody: !!req.body
         }, 'Request received');
     }
-    
+
     next();
 });
 
 // Serve artifacts directory
-const artifactsDir = path.join(__dirname, '..', 'artifacts');
+const artifactsDir = config.storage.artifactsDir;
 app.use('/artifacts', express.static(artifactsDir));
 
 //health-Check..!
@@ -71,7 +72,7 @@ app.use((err, req, res, next) => {
             path: req.path,
             contentType: req.headers['content-type'] || 'none'
         }, 'Connection reset - handled gracefully');
-        
+
         if (!res.headersSent) {
             return res.status(400).json({
                 error: "Connection-Error",
@@ -97,7 +98,7 @@ app.use((err, req, res, next) => {
         }
         return; // Don't log error if response already sent
     }
-    
+
     logger.error({
         err,
         path: req.path,
@@ -167,17 +168,25 @@ app.use((req, res) => {
  */
 //Start-Server..!
 const PORT = config.server.port;
-app.listen(PORT, async () => {
+//0.0.0.0 means listen on all interfaces
+app.listen(PORT, '0.0.0.0', async () => {
     logger.info(`🚀 Server running on http://localhost:${PORT}`);
     logger.info(`📁 Upload directory: ${config.storage.uploadDir}`);
     logger.info(`📦 Artifacts directory: ${config.storage.artifactsDir}`);
-    
+    logger.info(`👀 Watch directory: ${config.storage.watchDir}`);
+
     // Create artifacts directory if it doesn't exist
     if (!existsSync(config.storage.artifactsDir)) {
         await mkdir(config.storage.artifactsDir, { recursive: true });
         logger.info('✅ Artifacts directory created');
     }
-    
+
+    // Create upload directory if it doesn't exist
+    if (!existsSync(config.storage.uploadDir)) {
+        await mkdir(config.storage.uploadDir, { recursive: true });
+        logger.info('✅ Upload directory created');
+    }
+
     // Initialize LLM on startup (optional - won't crash if model missing)
     try {
         logger.info("🧠 Initializing LLM...");
@@ -187,6 +196,13 @@ app.listen(PORT, async () => {
     } catch (err) {
         logger.warn({ error: err.message }, "⚠️ LLM not available - running in heuristics-only mode");
         logger.info("To enable LLM, download a GGUF model to: " + config.llm.modelPath);
+    }
+
+    // Start file watcher for automatic processing
+    try {
+        await startFileWatcher();
+    } catch (err) {
+        logger.error({ error: err.message }, "❌ Failed to start file watcher");
     }
 });
 

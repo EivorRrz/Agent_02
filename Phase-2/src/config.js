@@ -15,7 +15,7 @@ dotenv.config();
 const config = {
     //Paths..!
     //either get the data from the env file or else create the folder for it..!
-    phase1ArtifactsDir: process.env.PHASE1_ARTIFACTS_DIR || path.resolve(__dirname, '../../Phase-1/src/artifacts'),
+    phase1ArtifactsDir: process.env.PHASE1_ARTIFACTS_DIR || path.resolve(__dirname, '../../Phase-1/artifacts'),
 
 
     //Output-Settings..!

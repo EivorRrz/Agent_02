@@ -214,14 +214,31 @@ async function processBatch(batch, context, retryCount = 0) {
         return result;
     } catch (error) {
         if (retryCount < MAX_RETRIES) {
-            logger.warn({ 
-                error: error.message, 
-                retry: retryCount + 1,
-                maxRetries: MAX_RETRIES
-            }, 'LLM batch processing failed, retrying...');
+            // Check for rate limit errors
+            let waitTime = RETRY_DELAY * (retryCount + 1);
             
-            // Exponential backoff
-            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
+            if (error.message && error.message.startsWith('RATE_LIMIT:')) {
+                // Extract wait time from rate limit error
+                const parts = error.message.split(':');
+                if (parts.length >= 2) {
+                    const waitSeconds = parseInt(parts[1]) || 60;
+                    waitTime = waitSeconds * 1000; // Convert to milliseconds
+                    logger.warn({ 
+                        waitSeconds,
+                        retry: retryCount + 1,
+                        maxRetries: MAX_RETRIES
+                    }, 'Rate limit hit, waiting before retry...');
+                }
+            } else {
+                logger.warn({ 
+                    error: error.message, 
+                    retry: retryCount + 1,
+                    maxRetries: MAX_RETRIES
+                }, 'LLM batch processing failed, retrying...');
+            }
+            
+            // Exponential backoff with rate limit handling
+            await new Promise(resolve => setTimeout(resolve, waitTime));
             return processBatch(batch, context, retryCount + 1);
         }
         throw error;
@@ -383,6 +400,13 @@ export async function enhanceMetadataWithLLM(metadata) {
                 total: totalColumns, 
                 progress: `${Math.round((processed / totalColumns) * 100)}%` 
             }, 'Batch completed');
+            
+            // Add delay between batches to avoid rate limits (except for last batch)
+            if (i < batches.length - 1) {
+                const delayMs = 2000; // 2 second delay between batches
+                logger.debug({ delayMs }, 'Waiting before next batch to avoid rate limits');
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
         }
         
         // Merge all results

@@ -39,3 +39,17 @@ export {
     getSchemaPrompt,
 } from "./schema.js";
 
+// LangChain Azure OpenAI Service
+export {
+    initializeLangChain,
+    enhanceMetadataBatchWithLangChain,
+    isLangChainReady,
+    getLangChainStatus,
+} from "./azureLangChainService.js";
+
+// Pure Agentic Workflow (LangGraph)
+export {
+    createMetadataEnhancementAgent,
+    runAgenticEnhancement,
+} from "../agents/metadataEnhancementAgent.js";
+

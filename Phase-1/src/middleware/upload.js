@@ -70,6 +70,50 @@ async function generatePhysicalModels(fileId) {
 }
 
 /**
+ * Generate interactive dual HTML visualization (DATA_MODEL_DUAL_ENHANCED.html)
+ * This creates the interactive ERD viewer that Phase-2 expects
+ */
+async function generateInteractiveHTML(fileId) {
+    return new Promise((resolve) => {
+        const phase2Dir = join(__dirname, '..', '..', '..', 'Phase-2');
+        const phase2Script = join(phase2Dir, 'generate.js');
+        
+        logger.info({ fileId }, '🎨 Generating interactive dual HTML visualization...');
+        
+        const nodeProcess = spawn('node', [phase2Script, fileId], {
+            cwd: phase2Dir,
+            shell: true
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        
+        nodeProcess.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+        
+        nodeProcess.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+        
+        nodeProcess.on('close', (code) => {
+            if (code === 0) {
+                logger.info({ fileId }, '✅ Interactive dual HTML generated successfully');
+                resolve({ success: true, output: stdout });
+            } else {
+                logger.warn({ fileId, code, stderr: stderr.substring(0, 200) }, '⚠️ Interactive HTML generation failed (non-critical)');
+                resolve({ success: false, error: stderr });
+            }
+        });
+        
+        nodeProcess.on('error', (err) => {
+            logger.warn({ error: err.message, fileId }, '⚠️ Failed to spawn interactive HTML generator (non-critical)');
+            resolve({ success: false, error: err.message });
+        });
+    });
+}
+
+/**
  * Automatically generate all models (logical + physical)
  */
 async function generateAllModels(fileId, metadataDocument) {
@@ -95,38 +139,8 @@ async function generateAllModels(fileId, metadataDocument) {
             artifacts.errors.push({ type: 'logical_dbml', error: err.message });
         }
         
-        try {
-            // Generate Logical ERD using Production Diagram Generator (Graphviz → DBML fallback)
-            // DBML is saved in dbml/ folder, diagrams go to logical/ folder
-            const dbmlPath = path.join(config.storage.artifactsDir, fileId, 'dbml', 'schema.dbml');
-            
-            // Check if DBML exists before generating diagrams
-            if (existsSync(dbmlPath)) {
-                // Use production diagram generator (Graphviz primary, DBML CLI fallback)
-                const { generateProductionDiagrams } = await import('../generators/productionDiagramGenerator.js');
-                const diagramResults = await generateProductionDiagrams(fileId, dbmlPath);
-                artifacts.logical.images = {
-                    png: diagramResults.png,
-                    svg: diagramResults.svg,
-                    pdf: diagramResults.pdf
-                };
-                artifacts.logical.generator = diagramResults.generator;
-                artifacts.logical.schemaSize = diagramResults.schemaSize;
-                if (diagramResults.errors.length > 0) {
-                    artifacts.errors.push(...diagramResults.errors);
-                }
-                logger.info({ 
-                    fileId, 
-                    generator: diagramResults.generator,
-                    schemaSize: diagramResults.schemaSize 
-                }, '✅ Logical ERD generated');
-            } else {
-                logger.warn({ fileId }, '⚠️ DBML not found, skipping diagram generation');
-            }
-        } catch (err) {
-            logger.warn({ error: err.message, fileId }, '⚠️ Logical ERD generation failed');
-            artifacts.errors.push({ type: 'logical_erd', error: err.message });
-        }
+        // Diagram generation removed - only Interactive HTML viewer is used
+        logger.info({ fileId }, 'Skipping static diagram generation (PNG/SVG/PDF) - using Interactive HTML viewer only');
         
         // Step 2: Generate Physical Model (Phase-2)
         logger.info({ fileId }, '💾 Auto-generating Physical Model...');
@@ -642,14 +656,22 @@ router.post('/ingest', validateApiKey, (req, res, next) => {
             createdAt: new Date().toISOString()
         };
         
-        // Save metadata to disk (artifacts/<fileId>/metadata.json)
+        // Save metadata to disk (artifacts/<fileId>/json/metadata.json)
         await saveMetadata(fileId, metadataDocument);
         logger.info({ fileId, tables: Object.keys(tablesMap).length }, 'Metadata saved to artifacts folder');
         
-        // UPLOAD ONLY - No auto-generation
-        // Use separate endpoints to generate:
-        // - POST /generate/logical/:fileId - Generate logical model (DBML + ERD diagrams)
-        // - POST /generate/physical/:fileId - Generate physical model (MySQL SQL)
+        // Generate interactive HTML and MySQL DDL automatically (one flow)
+        try {
+            logger.info({ fileId }, '🎨 Generating interactive HTML and MySQL DDL automatically...');
+            const result = await generateInteractiveHTML(fileId);
+            if (result.success) {
+                logger.info({ fileId }, '✅ Interactive HTML and MySQL DDL generated automatically');
+            } else {
+                logger.warn({ fileId, error: result.error }, '⚠️ Generation failed (non-critical)');
+            }
+        } catch (err) {
+            logger.warn({ error: err.message, fileId }, '⚠️ Failed to generate artifacts (non-critical)');
+        }
         
         const includeFullMetadata = req.query.full === 'true' || req.query.full === '1';
 
@@ -676,10 +698,9 @@ router.post('/ingest', validateApiKey, (req, res, next) => {
             llmStatus: getLLMStatus(),
             metadataPath: `artifacts/${fileId}/json/metadata.json`,
             preview: metadata.slice(0, 5),
-            nextSteps: {
-                logical: `POST /generate/logical/${fileId} - Generate logical model (DBML + ERD diagrams)`,
-                physical: `POST /generate/physical/${fileId} - Generate physical model (MySQL SQL)`,
-                all: `POST /generate/${fileId} - Generate all artifacts`
+            artifacts: {
+                interactiveHTML: `artifacts/${fileId}/executive/DATA_MODEL_DUAL_ENHANCED.html`,
+                mysqlDDL: `artifacts/${fileId}/physical/mysql.sql`
             }
         };
 
@@ -690,7 +711,7 @@ router.post('/ingest', validateApiKey, (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            message: "✅ File uploaded and metadata extracted successfully! Use /generate endpoints to create artifacts.",
+            message: "✅ File uploaded, metadata extracted, and artifacts generated! Interactive HTML and MySQL DDL are ready.",
             data: responseData,
         });
 
@@ -894,10 +915,22 @@ router.post('/simple', validateApiKey, (req, res, next) => {
         
         await saveMetadata(fileId, metadataDocument);
         
-        // Simple endpoint also only uploads - no auto-generation
+        // Generate interactive HTML and MySQL DDL automatically (one flow)
+        try {
+            logger.info({ fileId }, '🎨 Generating interactive HTML and MySQL DDL automatically...');
+            const result = await generateInteractiveHTML(fileId);
+            if (result.success) {
+                logger.info({ fileId }, '✅ Interactive HTML and MySQL DDL generated automatically');
+            } else {
+                logger.warn({ fileId, error: result.error }, '⚠️ Generation failed (non-critical)');
+            }
+        } catch (err) {
+            logger.warn({ error: err.message, fileId }, '⚠️ Failed to generate artifacts (non-critical)');
+        }
+        
         res.status(200).json({
             success: true,
-            message: "✅ File uploaded and metadata extracted successfully! Use /generate endpoints to create artifacts.",
+            message: "✅ File uploaded, metadata extracted, and artifacts generated! Interactive HTML and MySQL DDL are ready.",
             fileId,
             fileInfo: {
                 originalName: fileInfo.originalName,
@@ -920,10 +953,9 @@ router.post('/simple', validateApiKey, (req, res, next) => {
                 }
             },
             metadataPath: `artifacts/${fileId}/json/metadata.json`,
-            nextSteps: {
-                logical: `POST /generate/logical/${fileId} - Generate logical model (DBML + ERD diagrams)`,
-                physical: `POST /generate/physical/${fileId} - Generate physical model (MySQL SQL)`,
-                all: `POST /generate/${fileId} - Generate all artifacts`
+            artifacts: {
+                interactiveHTML: `artifacts/${fileId}/executive/DATA_MODEL_DUAL_ENHANCED.html`,
+                mysqlDDL: `artifacts/${fileId}/physical/mysql.sql`
             }
         });
         

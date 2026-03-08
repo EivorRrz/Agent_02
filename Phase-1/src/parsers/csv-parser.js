@@ -15,6 +15,7 @@ import logger from "../utils/logger.js";
  * @returns {Array} Array of normalized metadata rows
  */
 
+
 export const parseCSV = async (filePath) => {
     /**
      * csv-parse reads the CSV file from the filePath..!

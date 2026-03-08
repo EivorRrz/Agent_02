@@ -4,6 +4,7 @@
 
 import { extname } from "path";
 import logger from "../utils/logger.js";
+import config from "../config/index.js";
 import { parseExcel, extractMetaDataFromExcel } from "./excelParser.js";
 import { parseCSV, extractMetaDataFromCSV } from "./csv-parser.js";
 import { inferPKFK } from "../heuristics/index.js";
@@ -70,19 +71,23 @@ export async function parseMetadataFile(filePath, originalName) {
         }
 
         //===========================================
-        // Production-Ready LLM Enhancement (if available)
+        // Pure Agentic LLM Enhancement (LangChain + LangGraph)
         //===========================================
         try {
-            if (isLlmReady()) {
-                logger.info("LLM is ready, performing comprehensive metadata enhancement...");
+            if (config.llm.provider === "azure") {
+                logger.info("🚀 Using pure agentic LangChain + LangGraph workflow...");
                 
-                // Step 1: Comprehensive enhancement (data types, names, descriptions, quality)
+                // Import agentic workflow
+                const { runAgenticEnhancement } = await import("../agents/metadataEnhancementAgent.js");
+                
+                // Run pure agentic enhancement (FULLY AGENTIC!)
+                metadata = await runAgenticEnhancement(metadata);
+                
+                logger.info("✅ Pure agentic enhancement completed successfully!");
+            } else if (isLlmReady()) {
+                // Fallback to existing Ollama workflow
+                logger.info("Using existing LLM enhancement...");
                 metadata = await enhanceMetadataWithLLM(metadata);
-                
-                // Step 2: PK/FK analysis (if needed, can be skipped if already done well)
-                // metadata = await analyzeMetadata(metadata);
-                
-                logger.info("✅ Production-ready LLM enhancement completed successfully!");
             } else {
                 logger.info("LLM not initialized, using heuristics only");
             }

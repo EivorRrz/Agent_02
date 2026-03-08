@@ -333,71 +333,18 @@ export async function generatePhysicalERDSVG(metadata, outputPath, options = {})
 
 /**
  * Generate physical ERD diagrams (PNG + SVG)
- * Uses Graphviz primary, falls back to DBML if needed
+ * DISABLED: Only Interactive HTML viewer is used now
  */
 export async function generatePhysicalERDDiagrams(metadata, outputDir) {
-    const results = {
+    // Diagram generation removed - only Interactive HTML viewer is used
+    logger.info({ outputDir }, 'Skipping static diagram generation (PNG/SVG) - using Interactive HTML viewer only');
+    
+    return {
         png: null,
         svg: null,
         generator: null,
-        errors: []
+        errors: [],
+        note: 'Static diagrams disabled - use Interactive HTML viewer instead'
     };
-    
-    const pngPath = path.join(outputDir, 'erd.png');
-    const svgPath = path.join(outputDir, 'erd.svg');
-    
-    // Try Graphviz first
-    if (isGraphvizInstalled()) {
-        try {
-            const schemaSize = getSchemaSize(metadata);
-            const tablesArray = Array.from(metadata.tables.values());
-            const maxColumnsPerTable = Math.max(...tablesArray.map(t => t.columns.length), 0);
-            
-            if (!existsSync(pngPath)) {
-                await generatePhysicalERDPNG(metadata, pngPath, { 
-                    retries: schemaSize === 'very-large' ? 5 : 3,
-                    maxColumnsPerTable: Math.min(maxColumnsPerTable, 100)
-                });
-                results.png = pngPath;
-            } else {
-                results.png = pngPath;
-            }
-            
-            if (!existsSync(svgPath)) {
-                await generatePhysicalERDSVG(metadata, svgPath, { 
-                    retries: schemaSize === 'very-large' ? 5 : 3,
-                    maxColumnsPerTable: Math.min(maxColumnsPerTable, 100)
-                });
-                results.svg = svgPath;
-            } else {
-                results.svg = svgPath;
-            }
-            
-            results.generator = 'graphviz';
-            logger.info({ pngPath, svgPath }, '✅ Physical ERD diagrams generated with Graphviz');
-            
-            return results;
-            
-        } catch (err) {
-            logger.warn({ error: err.message }, '⚠️ Graphviz failed, trying DBML fallback...');
-            results.errors.push({ generator: 'graphviz', error: err.message });
-        }
-    }
-    
-    // Fallback: Log that Graphviz should be used
-    // Note: DBML CLI fallback would require complex cross-module imports
-    // Graphviz is the primary and should work for most cases
-    logger.warn({ 
-        pngPath, 
-        svgPath 
-    }, '⚠️ Graphviz not available. Physical ERD diagrams require Graphviz installation.');
-    
-    results.errors.push({ 
-        generator: 'graphviz', 
-        error: 'Graphviz is not installed. Install from https://graphviz.org/download/' 
-    });
-    
-    // Return partial results (no diagrams, but other files may be generated)
-    return results;
 }
 

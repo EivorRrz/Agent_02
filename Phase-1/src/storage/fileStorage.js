@@ -21,13 +21,13 @@ export async function saveMetadata(fileId, data) {
     try {
         // Create organized folders
         const paths = await ensureFolders(fileId);
-        
+
         // Save metadata.json in json/ folder
         const metadataPath = join(paths.json, 'metadata.json');
         await writeFile(metadataPath, JSON.stringify(data, null, 2), 'utf-8');
-        
+
         logger.info({ fileId, path: metadataPath }, 'Metadata saved to disk');
-        
+
         return metadataPath;
     } catch (error) {
         logger.error({ error: error.message, fileId }, 'Failed to save metadata');
@@ -46,7 +46,7 @@ export async function getMetadata(fileId) {
         const newPath = join(config.storage.artifactsDir, fileId, 'json', 'metadata.json');
         // Fallback to old location for backward compatibility
         const oldPath = join(config.storage.artifactsDir, fileId, 'metadata.json');
-        
+
         const metadataPath = existsSync(newPath) ? newPath : oldPath;
 
         if (!existsSync(metadataPath)) {

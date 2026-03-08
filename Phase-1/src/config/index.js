@@ -11,6 +11,10 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);//import.meta.url the path of current-file..!
 const __dirname = dirname(__filename);//the current directory of the current file.!
 
+// Default paths - resolve relative to Phase-1 root (go up from src/config to Phase-1)
+const defaultArtifactsDir = join(__dirname, '..', '..', 'artifacts');
+const defaultUploadDir = join(__dirname, '..', '..', 'uploads');
+const defaultWatchDir = join(__dirname, '..', '..', 'watch');
 
 const config = {
     //all the configs of the root..!
@@ -24,16 +28,16 @@ const config = {
     },
     storage: {
         //artifacts all the resource that the agent generates..!
-        artifactsDir: process.env.ARTIFACTS_DIR || join(__dirname, "../artifacts"),
+        artifactsDir: process.env.ARTIFACTS_DIR || defaultArtifactsDir,
         //means get the env or else get the artifacts dir from the current directory...!
-        uploadDir: process.env.UPLOAD_DIR || join(__dirname, "../uploads"),
+        uploadDir: process.env.UPLOAD_DIR || defaultUploadDir,
         //SIMILAR get it from the env or else make sure to take from the uploads folder from current directory.>
+        // Watch directory for automatic file processing
+        watchDir: process.env.WATCH_DIR || defaultWatchDir,
     },
-    //LLM - Ollama with DeepSeek-R1:7B
+    //LLM - Azure OpenAI only
     llm: {
-        provider: "ollama",
-        ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
-        model: process.env.OLLAMA_MODEL || "deepseek-r1:7b",
+        provider: "azure", // Always Azure OpenAI
         // Metadata enhancement settings
         metadataEnhancement: {
             enabled: process.env.LLM_ENHANCEMENT_ENABLED !== "false", // Default: true
@@ -43,7 +47,15 @@ const config = {
             timeout: parseInt(process.env.LLM_TIMEOUT || "30000", 10), // 30 seconds
             minConfidence: parseFloat(process.env.LLM_MIN_CONFIDENCE || "0.7", 10),
         }
+    },
+    // Azure OpenAI Configuration
+    azure: {
+        apiKey: process.env.AZURE_OPENAI_API_KEY,
+        endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+        deploymentName: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "gpt-4o",
+        apiVersion: process.env.AZURE_OPENAI_API_VERSION || "2025-01-01-preview",
     }
 }
 
 export default config;//export it.!
+

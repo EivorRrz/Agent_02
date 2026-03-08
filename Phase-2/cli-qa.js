@@ -13,15 +13,18 @@
  *   node cli-qa.js <fileId>
  */
 
+// CRITICAL: Load .env FIRST before any other imports
+import './loadEnv.js';
+
 import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
 import config from './src/config.js';
 import { readJSON } from './src/utils/fileUtils.js';
-import { chat, Initializellm, isLlmReady } from '../Phase-1/src/llm/llmService.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { initializeLangChain, isLangChainReady } from '../Phase-1/src/llm/azureLangChainService.js';
+import { runQaAgent } from './src/agents/qaAgent.js';
+import { buildModelContext } from './src/agents/metadataAnalyzer.js';
+import { verifyEnv } from './loadEnv.js';
 
 function log(msg) {
   console.log(msg);
@@ -49,6 +52,13 @@ async function main() {
   log(`📊 PHYSICAL MODEL Q&A CLI`);
   log(`File ID: ${fileId}`);
   log('');
+  
+  // Verify environment is loaded
+  const envStatus = verifyEnv();
+  if (!envStatus.hasApiKey || !envStatus.hasEndpoint) {
+    log(`⚠ Environment check: API Key=${envStatus.hasApiKey}, Endpoint=${envStatus.hasEndpoint}`);
+    log(`   Looking for .env at: ${path.join(__dirname, '..', 'Phase-1', '.env')}`);
+  }
 
   // Determine artifact paths (Phase-1 artifacts for this fileId)
   const baseDir = config.phase1ArtifactsDir;
@@ -58,35 +68,80 @@ async function main() {
   const impactPath = path.join(physicalDir, 'physical_impact.json');
   const insightsPath = path.join(physicalDir, 'physical_graph_insights.json');
 
-  const [lineage, impact, insights] = await Promise.all([
-    loadArtifactSafe(lineagePath, 'Lineage'),
-    loadArtifactSafe(impactPath, 'Impact'),
-    loadArtifactSafe(insightsPath, 'Graph insights')
-  ]);
-
-  if (!lineage && !impact && !insights) {
-    console.error('❌ No analysis artifacts found. Run generate-complete.js first.');
+  // Load metadata.json (required)
+  const metadataPath = path.join(baseDir, fileId, 'json', 'metadata.json');
+  const metadata = await loadArtifactSafe(metadataPath, 'Metadata');
+  
+  if (!metadata) {
+    console.error('❌ Metadata file not found.');
+    console.error(`   Expected: ${metadataPath}`);
     process.exit(1);
   }
+  
+  log('✓ Loaded metadata.json');
+  
+  // Try to load precomputed analysis artifacts (optional)
+  const [precomputedLineage, precomputedImpact, precomputedInsights] = await Promise.all([
+    loadArtifactSafe(lineagePath, 'Precomputed Lineage'),
+    loadArtifactSafe(impactPath, 'Precomputed Impact'),
+    loadArtifactSafe(insightsPath, 'Precomputed Graph insights')
+  ]);
+  
+  // Extract lineage, impact, and insights directly from metadata
+  log('✓ Analyzing metadata to extract lineage, impact, and graph insights...');
+  const modelContext = buildModelContext(metadata);
+  
+  // Use precomputed if available, otherwise use extracted
+  const lineage = precomputedLineage || modelContext.lineage;
+  const impact = precomputedImpact || modelContext.impact;
+  const insights = precomputedInsights || modelContext.insights;
+  
+  log('✓ Model analysis complete - Ready for questions!');
 
-  // Initialize LLM once
+  // Initialize LangChain once
   try {
-    if (!isLlmReady()) {
-      await Initializellm();
+    if (!isLangChainReady()) {
+      await initializeLangChain();
     }
   } catch (err) {
-    console.error(`❌ LLM initialization failed: ${err.message}`);
+    console.error(`❌ LangChain initialization failed: ${err.message}`);
     console.error('You can still inspect JSON artifacts manually in the physical folder.');
     process.exit(1);
   }
 
   log('');
-  log('💬 Ask questions as a leader/manager, e.g.:');
-  log('   - "Where did order.customer_id come from?"');
-  log('   - "What happens if we drop the order table?"');
-  log('   - "Is this schema production-ready?"');
+  log('💬 Talk directly to your data model! Ask ANYTHING:');
+  log('');
+  log('   Examples:');
+  log('   - "Tell me everything about sec_master table"');
+  log('   - "What are all the relationships in this model?"');
+  log('   - "Show me the complete dependency graph"');
+  log('   - "What are the risks and issues?"');
+  log('   - "Compare tables in the Security domain"');
+  log('   - "What columns are missing primary keys?"');
+  log('   - "Explain the lineage of customer_id column"');
+  log('   - "What happens if I modify order table?"');
+  log('   - "Give me a complete overview of this model"');
+  log('   - "What are the patterns in column naming?"');
+  log('   - "Show me statistics and metrics"');
+  log('   - "What domains exist and what tables belong to them?"');
+  log('   - "Tell me everything" or "What can you tell me?"');
+  log('');
+  log('   Ask ANYTHING - the model has complete information!');
   log('Type "exit" to quit.');
   log('');
+
+  // Build context for Q&A agent - talk directly to the model
+  const qaContext = {
+    fileId,
+    lineage: lineage,
+    impact: impact,
+    insights: insights,
+    metadata: metadata, // Full metadata for deep analysis
+  };
+
+  // Conversation history (maintained across questions)
+  let conversationHistory = [];
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -103,60 +158,33 @@ async function main() {
       return;
     }
 
-    // Build safe, bounded context for LLM (no hardcoded patterns)
-    const context = {
-      fileId,
-      lineage: lineage || undefined,
-      impact: impact || undefined,
-      insights: insights || undefined
-    };
-
-    const contextJson = JSON.stringify(context, null, 2);
-
-    const systemPrompt = `
-You are an enterprise data architecture assistant for EY.
-
-You are given PRECOMPUTED JSON facts about a PHYSICAL DATA MODEL:
-
-1) physical_lineage.json  → where each physical column came from
-2) physical_impact.json   → which tables depend on which (PK/FK impact)
-3) physical_graph_insights.json → health/risk checks for the physical model
-
-CRITICAL RULES:
-- You MUST answer as if speaking to a non-technical leader or manager.
-- Use short, clear English explanations.
-- ONLY use facts present in the JSON context the user provides.
-- If something is not in the JSON, say "The system does not have that information."
-- Do NOT invent tables, columns, constraints, or risks.
-- Do NOT suggest changes to the model; just explain the current state.
-- The JSON is the single source of truth. Never guess beyond it.
-`;
-
-    const userMessage = `
-JSON FACTS:
-${contextJson}
-
-Leader's question:
-${question}
-`;
-
     try {
       console.log('\n…Thinking based on lineage, impact and graph insights…\n');
 
-      const answer = await chat(userMessage, systemPrompt);
-      const trimmed = (answer || '').trim();
+      // Use LangGraph Q&A agent with memory and automatic retries
+      const result = await runQaAgent(question, qaContext, conversationHistory);
+      
+      // Update conversation history
+      conversationHistory = result.conversationHistory;
+
+      const trimmed = (result.answer || '').trim();
 
       if (!trimmed) {
         console.log('');
-        console.log('A> The system did not return a response. Please check the Ollama logs or try again.');
+        console.log('A> The system did not return a response. Please try again.');
         console.log('');
       } else {
         console.log('');
-        console.log(`A> ${trimmed}`);
+        if (result.retryCount > 0) {
+          console.log(`A> ${trimmed} (Retried ${result.retryCount} time(s))`);
+        } else {
+          console.log(`A> ${trimmed}`);
+        }
         console.log('');
       }
     } catch (err) {
-      console.error(`❌ LLM error: ${err.message}`);
+      console.error(`❌ LangChain error: ${err.message}`);
+      logger.error({ error: err.message, stack: err.stack }, "Q&A CLI error");
     }
 
     rl.prompt();
