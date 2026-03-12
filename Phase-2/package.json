@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "generate": "node generate-complete.js"
+    "generate": "node generate.js"
   },
   "keywords": [
     "mysql",

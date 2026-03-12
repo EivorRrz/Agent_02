@@ -2,23 +2,23 @@
   "dataTypes": {
     "client_id": {
       "type": "VARCHAR",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.7999999999999999,
+      "count": 6
     },
     "pmt_end_adj": {
       "type": "TIMESTAMP",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "compound": {
       "type": "VARCHAR",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "erisa": {
       "type": "BOOLEAN",
-      "confidence": 0.8500000000000001,
-      "count": 2
+      "confidence": 0.8333333333333334,
+      "count": 3
     },
     "calc_type": {
       "type": "VARCHAR",
@@ -27,38 +27,38 @@
     },
     "notional_amt": {
       "type": "DECIMAL",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "reset_freq": {
       "type": "DECIMAL",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "life_floor": {
       "type": "DECIMAL",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "life_cap": {
       "type": "DECIMAL",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "multiplier": {
       "type": "DECIMAL",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "lookback": {
       "type": "DECIMAL",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "desc_instmt": {
       "type": "VARCHAR",
-      "confidence": 0.8,
-      "count": 2
+      "confidence": 0.8000000000000002,
+      "count": 3
     },
     "currency": {
       "type": "VARCHAR",
@@ -72,23 +72,23 @@
     },
     "accrual_date": {
       "type": "TIMESTAMP",
-      "confidence": 0.8500000000000001,
-      "count": 2
+      "confidence": 0.8666666666666667,
+      "count": 3
     },
     "accrued_int": {
       "type": "DECIMAL",
-      "confidence": 0.875,
-      "count": 2
+      "confidence": 0.85,
+      "count": 3
     },
     "base_commitment": {
       "type": "DECIMAL",
-      "confidence": 0.875,
-      "count": 2
+      "confidence": 0.85,
+      "count": 3
     },
     "base_contribution": {
       "type": "DECIMAL",
-      "confidence": 0.875,
-      "count": 2
+      "confidence": 0.85,
+      "count": 3
     },
     "base_currency": {
       "type": "VARCHAR",
@@ -97,13 +97,13 @@
     },
     "base_distribution": {
       "type": "DECIMAL",
-      "confidence": 0.875,
-      "count": 2
+      "confidence": 0.85,
+      "count": 3
     },
     "book_date_2": {
       "type": "TIMESTAMP",
-      "confidence": 0.8500000000000001,
-      "count": 2
+      "confidence": 0.8666666666666667,
+      "count": 3
     },
     "book_date_3": {
       "type": "TIMESTAMP",
@@ -127,18 +127,18 @@
     },
     "pos_start_date": {
       "type": "TIMESTAMP",
-      "confidence": 0.975,
-      "count": 2
+      "confidence": 0.9500000000000001,
+      "count": 3
     },
     "pos_stop_date": {
       "type": "TIMESTAMP",
-      "confidence": 0.975,
-      "count": 2
+      "confidence": 0.9500000000000001,
+      "count": 3
     },
     "price_date": {
       "type": "TIMESTAMP",
-      "confidence": 0.875,
-      "count": 2
+      "confidence": 0.85,
+      "count": 3
     },
     "source": {
       "type": "VARCHAR",
@@ -157,18 +157,18 @@
     },
     "total_recallable_distrib": {
       "type": "DECIMAL",
-      "confidence": 0.9,
-      "count": 2
+      "confidence": 0.8666666666666667,
+      "count": 3
     },
     "trd_commission": {
       "type": "DECIMAL",
-      "confidence": 0.9,
-      "count": 2
+      "confidence": 0.8666666666666667,
+      "count": 3
     },
     "trd_coupon": {
       "type": "DECIMAL",
-      "confidence": 0.9,
-      "count": 2
+      "confidence": 0.8666666666666667,
+      "count": 3
     },
     "ord_num": {
       "type": "VARCHAR",
@@ -184,12 +184,62 @@
       "type": "TIMESTAMP",
       "confidence": 0.9,
       "count": 1
+    },
+    "calculation_type_code": {
+      "type": "VARCHAR",
+      "confidence": 0.8,
+      "count": 1
+    },
+    "units_available": {
+      "type": "DECIMAL",
+      "confidence": 0.9,
+      "count": 2
+    },
+    "units_on_loan": {
+      "type": "DECIMAL",
+      "confidence": 0.9,
+      "count": 2
+    },
+    "cost_basis_local": {
+      "type": "DECIMAL",
+      "confidence": 0.9,
+      "count": 2
+    },
+    "local_market_value": {
+      "type": "DECIMAL",
+      "confidence": 0.875,
+      "count": 2
+    },
+    "base_market_value": {
+      "type": "DECIMAL",
+      "confidence": 0.875,
+      "count": 2
+    },
+    "clean_market_value_local": {
+      "type": "DECIMAL",
+      "confidence": 0.875,
+      "count": 2
+    },
+    "ccy_type_code": {
+      "type": "VARCHAR",
+      "confidence": 0.8,
+      "count": 1
+    },
+    "sec_ccy_type_code": {
+      "type": "VARCHAR",
+      "confidence": 0.8,
+      "count": 1
+    },
+    "base_ccy_type_code": {
+      "type": "VARCHAR",
+      "confidence": 0.8,
+      "count": 1
     }
   },
   "pkPatterns": {
     "_id": {
-      "confidence": 0.9,
-      "count": 2
+      "confidence": 0.9666666666666667,
+      "count": 6
     }
   },
   "fkPatterns": {},
@@ -271,7 +321,266 @@
       "suggestion": "Add an index on the 'portfolio' column.",
       "impact": "medium",
       "timestamp": "2026-02-22T21:10:43.537Z"
+    },
+    {
+      "table": "position",
+      "column": "port_id",
+      "suggestion": "Add an index on the 'port_id' column to improve JOIN performance with the 'port' table.",
+      "impact": "high",
+      "timestamp": "2026-03-09T18:51:39.185Z"
+    },
+    {
+      "table": "sec_master",
+      "column": "client_id",
+      "suggestion": "Add an index on the 'client_id' column to improve query performance for client-specific queries.",
+      "impact": "high",
+      "timestamp": "2026-03-09T18:51:39.186Z"
+    },
+    {
+      "table": "valuation",
+      "column": "price_date_time",
+      "suggestion": "Add an index on the 'price_date_time' column to optimize queries filtering by date.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T18:51:39.187Z"
+    },
+    {
+      "table": "holding_balance",
+      "column": "account_id",
+      "suggestion": "Add an index on the 'account_id' column to improve JOIN performance with the 'account' table.",
+      "impact": "high",
+      "timestamp": "2026-03-09T18:51:39.187Z"
+    },
+    {
+      "table": "trade",
+      "column": "port_id",
+      "suggestion": "Add an index on the 'port_id' column to improve JOIN performance with the 'port' table.",
+      "impact": "high",
+      "timestamp": "2026-03-09T18:51:39.187Z"
+    },
+    {
+      "table": "client_segmentation",
+      "column": "effective_date",
+      "suggestion": "Add an index on the 'effective_date' column to optimize segmentation queries filtering by date.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T18:51:39.188Z"
+    },
+    {
+      "table": "trade_order",
+      "column": "order_id",
+      "suggestion": "Add an index on the 'order_id' column to improve query performance for order-specific queries.",
+      "impact": "high",
+      "timestamp": "2026-03-09T18:51:39.188Z"
+    },
+    {
+      "table": "client_identification",
+      "column": "document_number",
+      "suggestion": "Add a UNIQUE constraint on 'document_number' to ensure no duplicate identification documents are stored.",
+      "impact": "high",
+      "timestamp": "2026-03-09T18:51:39.188Z"
+    },
+    {
+      "table": "client_risk_profile",
+      "column": "risk_level",
+      "suggestion": "Add an index on the 'risk_level' column to optimize risk-based filtering queries.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T18:51:39.188Z"
+    },
+    {
+      "table": "trade",
+      "column": "trade_date",
+      "suggestion": "Add an index on the 'trade_date' column to optimize queries filtering by trade date.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T18:51:39.189Z"
+    },
+    {
+      "table": "client_interaction",
+      "column": "interaction_date_time",
+      "suggestion": "Add an index on the 'interaction_date_time' column to optimize interaction queries filtering by date.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T18:51:39.189Z"
+    },
+    {
+      "table": "sec_master",
+      "column": "client_id",
+      "suggestion": "Add an index on the 'client_id' column to improve query performance for lookups and joins.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:01:56.168Z"
+    },
+    {
+      "table": "position",
+      "column": "port_id",
+      "suggestion": "Add an index on the 'port_id' column to optimize join performance with related tables.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:01:56.168Z"
+    },
+    {
+      "table": "holding_balance",
+      "column": "account_id",
+      "suggestion": "Add an index on the 'account_id' column to optimize queries filtering by account.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:01:56.169Z"
+    },
+    {
+      "table": "valuation",
+      "column": "price_date_time",
+      "suggestion": "Add an index on the 'price_date_time' column to optimize queries filtering by date.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:01:56.169Z"
+    },
+    {
+      "table": "client_profile",
+      "column": "gender",
+      "suggestion": "Change the 'gender' column data type from TIMESTAMP to ENUM with values like 'Male', 'Female', 'Other'.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:01:56.169Z"
+    },
+    {
+      "table": "position",
+      "column": "client_security_type_code",
+      "suggestion": "Create a composite index on 'client_security_type_code' and 'port_id' for multi-column queries.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:01:56.169Z"
+    },
+    {
+      "table": "position",
+      "column": "brs_sec_id",
+      "suggestion": "Add an index on 'brs_sec_id' to optimize queries filtering by security ID.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:01:56.170Z"
+    },
+    {
+      "table": "position",
+      "column": "port_id",
+      "suggestion": "Add an index on the 'port_id' column to improve JOIN performance with related tables.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:06:20.176Z"
+    },
+    {
+      "table": "sec_master",
+      "column": "client_id",
+      "suggestion": "Add an index on the 'client_id' column to optimize lookups and JOINs.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:06:20.177Z"
+    },
+    {
+      "table": "valuation",
+      "column": "price_date_time",
+      "suggestion": "Add an index on the 'price_date_time' column to optimize queries filtering by date.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:06:20.177Z"
+    },
+    {
+      "table": "trade",
+      "column": "port_id",
+      "suggestion": "Add an index on the 'port_id' column to improve JOIN performance with related tables.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:06:20.177Z"
+    },
+    {
+      "table": "holding_balance",
+      "column": "account_id",
+      "suggestion": "Add an index on the 'account_id' column to optimize lookups and JOINs.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:06:20.178Z"
+    },
+    {
+      "table": "client_profile",
+      "column": "full_name",
+      "suggestion": "Add a NOT NULL constraint to the 'full_name' column.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:06:20.178Z"
+    },
+    {
+      "table": "trade",
+      "column": "price",
+      "suggestion": "Add a CHECK constraint to ensure 'price' is greater than zero.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:06:20.178Z"
+    },
+    {
+      "table": "client_contact_details",
+      "column": "contact_value",
+      "suggestion": "Add a NOT NULL constraint to the 'contact_value' column.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:06:20.179Z"
+    },
+    {
+      "table": "position",
+      "column": "port_id",
+      "suggestion": "Add an index on the foreign key column 'port_id' to improve JOIN performance with related tables.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:22:46.492Z"
+    },
+    {
+      "table": "sec_master",
+      "column": "client_id",
+      "suggestion": "Ensure the primary key 'client_id' is indexed for faster lookups.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:22:46.493Z"
+    },
+    {
+      "table": "valuation",
+      "column": "price_date_time",
+      "suggestion": "Add an index on 'price_date_time' for faster filtering and sorting on date-related queries.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:22:46.493Z"
+    },
+    {
+      "table": "client_profile",
+      "column": "gender",
+      "suggestion": "Use ENUM for 'gender' instead of TIMESTAMP to represent fixed values like 'Male', 'Female', and 'Other'.",
+      "impact": "high",
+      "timestamp": "2026-03-09T21:22:46.494Z"
+    },
+    {
+      "table": "trade_order",
+      "column": "order_status_code",
+      "suggestion": "Add an index on 'order_status_code' for faster filtering on order statuses.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:22:46.494Z"
+    },
+    {
+      "table": "client_segmentation",
+      "column": "effective_date",
+      "suggestion": "Add an index on 'effective_date' for faster filtering and sorting.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:22:46.494Z"
+    },
+    {
+      "table": "client_profile",
+      "column": "occupation",
+      "suggestion": "Add an index on 'occupation' for faster filtering and grouping.",
+      "impact": "medium",
+      "timestamp": "2026-03-09T21:22:46.495Z"
+    },
+    {
+      "table": "position",
+      "column": "port_id",
+      "suggestion": "Add an index on the 'port_id' column to improve JOIN performance with related tables.",
+      "impact": "high",
+      "timestamp": "2026-03-10T20:15:34.173Z"
+    },
+    {
+      "table": "sec_master",
+      "column": "client_id",
+      "suggestion": "Add an index on the 'client_id' column for faster lookups and JOIN operations.",
+      "impact": "high",
+      "timestamp": "2026-03-10T20:15:34.174Z"
+    },
+    {
+      "table": "valuation",
+      "column": "price_date_time",
+      "suggestion": "Add an index on the 'price_date_time' column to optimize queries filtering by date.",
+      "impact": "medium",
+      "timestamp": "2026-03-10T20:15:34.174Z"
+    },
+    {
+      "table": "trade",
+      "column": "trade_date",
+      "suggestion": "Add an index on the 'trade_date' column to optimize queries filtering by trade date.",
+      "impact": "medium",
+      "timestamp": "2026-03-10T20:15:34.174Z"
     }
   ],
-  "lastUpdated": "2026-02-22T21:10:43.537Z"
+  "lastUpdated": "2026-03-10T20:15:34.174Z"
 }

@@ -19,8 +19,9 @@ if (!fileId) {
     process.exit(1);
 }
 
-const artifactPath = path.join(__dirname, '../Phase-1/artifacts', fileId);
-const metadataPath = path.join(artifactPath, 'json/metadata.json');
+// Use config for consistent artifact path (supports PHASE1_ARTIFACTS_DIR env)
+const artifactPath = path.join(config.phase1ArtifactsDir, fileId);
+const metadataPath = path.join(artifactPath, 'json', 'metadata.json');
 const executiveDir = path.join(artifactPath, 'executive');
 const logicalDir = path.join(artifactPath, 'logical');
 const outputPath = path.join(executiveDir, 'DATA_MODEL_DUAL_ENHANCED.html');

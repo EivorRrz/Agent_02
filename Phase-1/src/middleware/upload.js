@@ -27,7 +27,7 @@ const router = express.Router();
 async function generatePhysicalModels(fileId) {
     return new Promise((resolve, reject) => {
         const phase2Dir = join(__dirname, '..', '..', '..', 'Phase-2');
-        const phase2Script = join(phase2Dir, 'generate-complete.js');
+        const phase2Script = join(phase2Dir, 'generate.js');
         
         logger.info({ fileId }, '🐍 Auto-generating Phase-2: Physical Model...');
         

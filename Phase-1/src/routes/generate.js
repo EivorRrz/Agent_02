@@ -179,7 +179,7 @@ router.post('/physical/:fileId', async (req, res) => {
         try {
             logger.info({ fileId }, 'Generating MySQL physical models (Phase-2)...');
             const phase2Dir = path.join(__dirname, '..', '..', '..', 'Phase-2');
-            const phase2Script = path.join(phase2Dir, 'generate-complete.js');
+            const phase2Script = path.join(phase2Dir, 'generate.js');
             
             let stdout = '';
             let stderr = '';
@@ -225,6 +225,7 @@ router.post('/physical/:fileId', async (req, res) => {
             const erdSvgPath = path.join(physicalDir, 'erd.svg');
             const execReportPath = path.join(executiveDir, 'EXECUTIVE_REPORT.html');
             const interactivePath = path.join(executiveDir, 'erd_INTERACTIVE.html');
+            const dualEnhancedPath = path.join(executiveDir, 'DATA_MODEL_DUAL_ENHANCED.html');
             
             const physicalFiles = {};
             if (existsSync(mysqlSqlPath)) {
@@ -241,6 +242,8 @@ router.post('/physical/:fileId', async (req, res) => {
             }
             if (existsSync(interactivePath)) {
                 physicalFiles.interactive = `artifacts/${fileId}/executive/erd_INTERACTIVE.html`;
+            } else if (existsSync(dualEnhancedPath)) {
+                physicalFiles.interactive = `artifacts/${fileId}/executive/DATA_MODEL_DUAL_ENHANCED.html`;
             }
             
             if (Object.keys(physicalFiles).length === 0) {
@@ -340,11 +343,11 @@ router.post('/:fileId', async (req, res) => {
         // Step 3: Diagram generation removed - only Interactive HTML viewer is used
         logger.info({ fileId }, 'Skipping static diagram generation (PNG/SVG/PDF) - using Interactive HTML viewer only');
         
-        // Step 4: Generate Physical Models (Phase-2) - Use generate-complete.js
+        // Step 4: Generate Physical Models (Phase-2) - Use generate.js
         try {
             logger.info({ fileId }, 'Generating MySQL physical models (Phase-2)...');
             const phase2Dir = path.join(__dirname, '..', '..', '..', 'Phase-2');
-            const phase2Script = path.join(phase2Dir, 'generate-complete.js');
+            const phase2Script = path.join(phase2Dir, 'generate.js');
             
             let stdout = '';
             let stderr = '';
@@ -390,6 +393,7 @@ router.post('/:fileId', async (req, res) => {
             const erdSvgPath = path.join(physicalDir, 'erd.svg');
             const execReportPath = path.join(executiveDir, 'EXECUTIVE_REPORT.html');
             const interactivePath = path.join(executiveDir, 'erd_INTERACTIVE.html');
+            const dualEnhancedPath = path.join(executiveDir, 'DATA_MODEL_DUAL_ENHANCED.html');
             
             const physicalFiles = {};
             if (existsSync(mysqlSqlPath)) {
@@ -406,6 +410,8 @@ router.post('/:fileId', async (req, res) => {
             }
             if (existsSync(interactivePath)) {
                 physicalFiles.interactive = `artifacts/${fileId}/executive/erd_INTERACTIVE.html`;
+            } else if (existsSync(dualEnhancedPath)) {
+                physicalFiles.interactive = `artifacts/${fileId}/executive/DATA_MODEL_DUAL_ENHANCED.html`;
             }
             
             if (Object.keys(physicalFiles).length === 0) {

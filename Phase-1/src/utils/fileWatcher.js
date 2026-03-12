@@ -9,6 +9,8 @@ import { stat, rename, unlink, readdir } from 'fs/promises';
 import { join, extname, basename, dirname } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import logger from './logger.js';
 import config from '../config/index.js';
 import { parseMetadataFile } from '../parsers/index.js';
@@ -16,6 +18,27 @@ import { getInferenceStats } from '../heuristics/index.js';
 import { getLLMStatus } from '../llm/index.js';
 import { saveMetadata } from '../storage/fileStorage.js';
 import { spawn } from 'child_process';
+
+const execAsync = promisify(exec);
+
+async function openInBrowser(url) {
+    const platform = process.platform;
+    let command;
+    if (platform === 'win32') {
+        command = `start "" "${url}"`;
+    } else if (platform === 'darwin') {
+        command = `open "${url}"`;
+    } else {
+        command = `xdg-open "${url}"`;
+    }
+    try {
+        await execAsync(command, { shell: true });
+        return true;
+    } catch (err) {
+        logger.warn({ error: err.message }, 'Could not open browser');
+        return false;
+    }
+}
 
 // Get current directory for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -348,6 +371,12 @@ async function processFile(filePath) {
                 console.log(`\n✅ ========================================`);
                 console.log(`✅ Generate command COMPLETED successfully for fileId: ${fileId}`);
                 console.log(`✅ ========================================\n`);
+                const htmlPath = join(config.storage.artifactsDir, fileId, 'executive', 'DATA_MODEL_DUAL_ENHANCED.html');
+                if (existsSync(htmlPath)) {
+                    const fileUrl = `file:///${htmlPath.replace(/\\/g, '/')}`;
+                    const opened = await openInBrowser(fileUrl);
+                    if (opened) console.log('🌐 Opened diagram in browser\n');
+                }
             } else {
                 // Skip if already generating (duplicate call prevented)
                 if (result && result.error === 'Already generating') {

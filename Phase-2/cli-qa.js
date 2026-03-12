@@ -1,13 +1,8 @@
 /**
  * CLI Q&A for PHYSICAL MODEL leaders
  *
- * - Reads precomputed JSON artifacts:
- *   - physical_lineage.json
- *   - physical_impact.json
- *   - physical_graph_insights.json
- * - Sends ONLY those facts to the LLM
- * - LLM answers in simple English (leader/manager friendly)
- * - LLM does NOT change the model or compute anything
+ * - Ask questions about the data model
+ * - Update the model via natural language (add/remove columns, regenerate, open)
  *
  * Usage:
  *   node cli-qa.js <fileId>
@@ -20,6 +15,7 @@ import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
 import config from './src/config.js';
+import logger from './src/utils/logger.js';
 import { readJSON } from './src/utils/fileUtils.js';
 import { initializeLangChain, isLangChainReady } from '../Phase-1/src/llm/azureLangChainService.js';
 import { runQaAgent } from './src/agents/qaAgent.js';
@@ -110,22 +106,18 @@ async function main() {
   }
 
   log('');
-  log('💬 Talk directly to your data model! Ask ANYTHING:');
+  log('💬 Talk directly to your data model! Ask questions OR update it:');
   log('');
-  log('   Examples:');
+  log('   Questions:');
   log('   - "Tell me everything about sec_master table"');
   log('   - "What are all the relationships in this model?"');
-  log('   - "Show me the complete dependency graph"');
   log('   - "What are the risks and issues?"');
-  log('   - "Compare tables in the Security domain"');
-  log('   - "What columns are missing primary keys?"');
-  log('   - "Explain the lineage of customer_id column"');
-  log('   - "What happens if I modify order table?"');
-  log('   - "Give me a complete overview of this model"');
-  log('   - "What are the patterns in column naming?"');
-  log('   - "Show me statistics and metrics"');
-  log('   - "What domains exist and what tables belong to them?"');
-  log('   - "Tell me everything" or "What can you tell me?"');
+  log('');
+  log('   Update model (natural language):');
+  log('   - "Add a status column to the orders table"');
+  log('   - "Remove the notes column from customers"');
+  log('   - "Open the model in my browser"');
+  log('   - "Regenerate the model"');
   log('');
   log('   Ask ANYTHING - the model has complete information!');
   log('Type "exit" to quit.');

@@ -5,8 +5,10 @@
 
 import { StateGraph, END, Annotation } from "@langchain/langgraph";
 import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
+import { HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
 import { AzureChatOpenAI } from "@langchain/openai";
 import { initializeLangChain, isLangChainReady } from "../../../Phase-1/src/llm/azureLangChainService.js";
+import { createModelTools } from "./modelTools.js";
 import logger from "../utils/logger.js";
 import config from "../config.js";
 
@@ -105,34 +107,33 @@ async function initializeStep(state) {
 }
 
 /**
- * Check if error is retryable (429 rate limit)
+ * Check if error is retryable (429 rate limit, timeout)
  */
 function isRetryableError(error) {
     if (!error || !error.message) return false;
     const msg = error.message.toLowerCase();
-    return msg.includes('429') || 
-           msg.includes('rate limit') || 
+    return msg.includes('429') ||
+           msg.includes('rate limit') ||
            msg.includes('exceeded') ||
-           msg.includes('quota');
+           msg.includes('quota') ||
+           msg.includes('timed out') ||
+           msg.includes('timeout');
 }
 
 /**
  * Extract retry delay from error (default 60s for rate limits)
  */
 function getRetryDelay(error, retryCount) {
-    if (isRetryableError(error)) {
-        // For rate limits, use longer delay
-        const baseDelay = 60000; // 60 seconds
-        // Try to extract Retry-After header if available
-        const retryAfter = error.response?.headers?.['retry-after'] || 
-                          error.headers?.['retry-after'];
-        if (retryAfter) {
-            return parseInt(retryAfter) * 1000;
-        }
-        return baseDelay;
+    const msg = (error?.message || "").toLowerCase();
+    if (msg.includes('429') || msg.includes('rate limit') || msg.includes('quota')) {
+        const retryAfter = error.response?.headers?.['retry-after'] || error.headers?.['retry-after'];
+        if (retryAfter) return parseInt(retryAfter) * 1000;
+        return 60000; // 60s for rate limits
     }
-    // Exponential backoff for other retryable errors
-    return Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30s
+    if (msg.includes('timed out') || msg.includes('timeout')) {
+        return Math.min(5000 * (retryCount + 1), 15000); // 5s, 10s, 15s for timeouts
+    }
+    return Math.min(1000 * Math.pow(2, retryCount), 30000);
 }
 
 /**
@@ -142,15 +143,17 @@ async function waitStep(state) {
     const { error, retryCount } = state;
     const delay = getRetryDelay(error, retryCount);
     
+    const errMsg = (error?.message || "").toLowerCase();
+    const isTimeout = errMsg.includes('timed out') || errMsg.includes('timeout');
     logger.info({
         delay: `${delay / 1000}s`,
         retryCount,
-        errorType: isRetryableError(error) ? 'rate_limit' : 'other'
+        errorType: isTimeout ? 'timeout' : (isRetryableError(error) ? 'rate_limit' : 'other')
     }, "Q&A Agent: Waiting before retry");
-    
+
     // Show progress to user
-    if (delay >= 10000) {
-        console.log(`⏳ Rate limit detected. Waiting ${Math.round(delay / 1000)} seconds before retry...`);
+    if (delay >= 5000) {
+        console.log(`⏳ ${isTimeout ? 'Request timed out.' : 'Rate limit detected.'} Waiting ${Math.round(delay / 1000)} seconds before retry...`);
     }
     
     await new Promise(resolve => setTimeout(resolve, delay));
@@ -219,7 +222,14 @@ async function generateAnswerStep(state) {
         };
     }
 
-    const contextJson = JSON.stringify(context, null, 2);
+    let contextJson = JSON.stringify(context, null, 2);
+    const maxChars = config.maxContextChars ?? 1000000;
+    if (contextJson.length > maxChars) {
+        const originalLength = contextJson.length;
+        const truncationNotice = `\n\n[CONTEXT TRUNCATED: Original was ${(originalLength / 1000).toFixed(0)}K chars (exceeds model limit). Only first ${(maxChars / 1000).toFixed(0)}K chars included. Ask about specific tables/columns for full details.]`;
+        contextJson = contextJson.slice(0, maxChars - truncationNotice.length) + truncationNotice;
+        logger.warn({ originalChars: originalLength, maxChars }, "Q&A Agent: Context truncated to fit model limit");
+    }
     const historyText = formatConversationHistory(conversationHistory);
 
     // Build comprehensive context description
@@ -303,8 +313,18 @@ CRITICAL RULES:
 - Be thorough - if asked about a table, provide comprehensive information about it.
 - If asked "anything" or "everything", provide a comprehensive overview.`;
 
+    const has = context?.fileId;
+    const toolInstructions = has ? `
+ AVAILABLE (use when user asks to change the model):
+- apply_model_changes: Add, remove, or modify columns. Pass operationsJson as JSON array: [{{"action":"add_column","table":"orders","columnName":"status","dataType":"VARCHAR","description":"Order status"}}]
+- regenerate_model: Regenerate SQL and HTML after changes. Call after apply_model_changes.
+- open_model: Open the diagram in the browser. Use when user says "open", "show", "view" the model.
+When user asks to add/remove/modify columns, use apply_model_changes first, then regenerate_model, then optionally open_model.` : "";
+
+    const systemPromptWith = systemPrompt + toolInstructions;
+
     const prompt = ChatPromptTemplate.fromMessages([
-        ["system", systemPrompt],
+        ["system", systemPromptWith],
         new MessagesPlaceholder("history"),
         ["human", `COMPLETE DATA MODEL INFORMATION:
 {contextJson}
@@ -335,6 +355,7 @@ INSTRUCTIONS:
         const endpointUrl = new URL(azureConfig.endpoint);
         const instanceName = endpointUrl.hostname.split('.')[0];
 
+        const llmTimeout = parseInt(process.env.QA_LLM_TIMEOUT_MS || "120000", 10) || 120000;
         const llm = new AzureChatOpenAI({
             azureOpenAIApiKey: azureConfig.apiKey,
             azureOpenAIApiInstanceName: instanceName,
@@ -342,28 +363,66 @@ INSTRUCTIONS:
             azureOpenAIApiVersion: azureConfig.apiVersion,
             temperature: 0.3,
             maxTokens: 2048,
-            timeout: 30000,
+            timeout: llmTimeout,
             maxRetries: 0, // We handle retries ourselves
         });
 
         // Convert conversation history to LangChain messages
         const historyMessages = conversationHistory.map(msg => {
             if (msg.role === "user") {
-                return { role: "human", content: msg.content };
+                return new HumanMessage(msg.content);
             } else if (msg.role === "assistant") {
-                return { role: "ai", content: msg.content };
+                return new AIMessage(msg.content);
             }
             return null;
         }).filter(Boolean);
 
-        const chain = prompt.pipe(llm);
-        const response = await chain.invoke({
+        const tools = has ? createModelTools(context.fileId) : [];
+        const llmToUse = tools.length > 0 ? llm.bindTools(tools) : llm;
+
+        const promptValue = await prompt.invoke({
             contextJson: contextJson,
             question: question,
             history: historyMessages,
         });
 
-        const answer = response.content || "I couldn't generate an answer. Please try again.";
+        let messages = [...promptValue.toChatMessages()];
+        let response;
+        let maxToolRounds = 5;
+        let round = 0;
+
+        while (round < maxToolRounds) {
+            response = await llmToUse.invoke(messages);
+            const toolCalls = response.tool_calls || [];
+
+            if (toolCalls.length === 0) break;
+
+            messages.push(response);
+            for (const tc of toolCalls) {
+                const toolName = tc.name;
+                const toolArgs = typeof tc.args === "string" ? JSON.parse(tc.args || "{}") : (tc.args || {});
+                const tool = tools.find((t) => t.name === toolName);
+                let result;
+                if (tool) {
+                    try {
+                        result = await tool.invoke(toolArgs);
+                    } catch (err) {
+                        result = JSON.stringify({ success: false, error: err.message });
+                    }
+                } else {
+                    result = JSON.stringify({ success: false, error: `Unknown tool: ${toolName}` });
+                }
+                messages.push(
+                    new ToolMessage({
+                        content: typeof result === "string" ? result : JSON.stringify(result),
+                        tool_call_id: tc.id || tc.name,
+                    })
+                );
+            }
+            round++;
+        }
+
+        const answer = response?.content || "I couldn't generate an answer. Please try again.";
 
         // Update conversation history
         const updatedHistory = [

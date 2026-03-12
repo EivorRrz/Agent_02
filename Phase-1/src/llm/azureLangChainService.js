@@ -245,8 +245,12 @@ function buildEnhancementContext(metadata) {
 
 /**
  * Enhance metadata batch using LangChain
+ * @param {Array} metadata - Full metadata array
+ * @param {Array} batch - Batch of columns to enhance
+ * @param {number} retryCount - Current retry attempt
+ * @param {string} [additionalContext] - Optional context for retry/error learning (e.g. from error memory)
  */
-export async function enhanceMetadataBatchWithLangChain(metadata, batch, retryCount = 0) {
+export async function enhanceMetadataBatchWithLangChain(metadata, batch, retryCount = 0, additionalContext = "") {
     // Input validation
     if (!metadata || !Array.isArray(metadata) || metadata.length === 0) {
         throw new Error("Invalid metadata: must be a non-empty array");
@@ -325,6 +329,7 @@ BATCH TO PROCESS:
 IMPORTANT RULES:
 - Only change data types if confidence > 0.7
 - Preserve original values if already correct
+{additionalContext}
         `);
 
         const chain = RunnableSequence.from([
@@ -347,6 +352,7 @@ IMPORTANT RULES:
                 context: context,
                 jsonBatch: JSON.stringify(batch, null, 2),
                 formatInstructions: formatInstructions,
+                additionalContext: additionalContext || "",
             }),
             timeoutPromise
         ]);
@@ -397,7 +403,7 @@ IMPORTANT RULES:
             const delay = RETRY_DELAY * Math.pow(2, retryCount);
             await new Promise(resolve => setTimeout(resolve, delay));
 
-            return enhanceMetadataBatchWithLangChain(metadata, batch, retryCount + 1);
+            return enhanceMetadataBatchWithLangChain(metadata, batch, retryCount + 1, additionalContext);
         }
 
         logger.error({

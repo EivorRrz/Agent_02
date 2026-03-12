@@ -9,6 +9,7 @@ import logger from "../utils/logger.js";
 import config from "../config/index.js";
 import { applyPatternMemory, learnFromCorrection } from "./patternMemory.js";
 import { inferCrossTableRelationships, applyInferredRelationships } from "./relationshipInferenceAgent.js";
+import { recordError, getErrorsForPrompt, clearErrorMemory } from "./errorMemory.js";
 import { generateOptimizationSuggestions, applyOptimizations } from "./schemaOptimizationAgent.js";
 
 /**
@@ -314,7 +315,8 @@ async function enhanceMetadataStep(state){
                         size: batch.length
                     }, "Processing batch");
 
-                    const result = await enhanceMetadataBatchWithLangChain(metadata, batch, 0);
+                    const additionalContext = [state.context || "", getErrorsForPrompt()].filter(Boolean).join("\n");
+                    const result = await enhanceMetadataBatchWithLangChain(metadata, batch, 0, additionalContext);
                     
                     return {
                         batchIndex: actualIndex,
@@ -326,7 +328,7 @@ async function enhanceMetadataStep(state){
                         error: error.message,
                         batch: actualIndex + 1
                     }, "Batch processing failed");
-                    
+                    recordError("enhance_batch", error.message, { batchIndex: actualIndex, batchSize: batch.length });
                     return {
                         batchIndex: actualIndex,
                         result: null,
@@ -923,6 +925,7 @@ export async function runAgenticEnhancement(metadata){
             return metadata;
         }
 
+        clearErrorMemory();
         const agent = createMetadataEnhancementAgent();
         
         const initialState = {
