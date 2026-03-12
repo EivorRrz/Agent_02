@@ -33,8 +33,8 @@ const config = {
     logLevel: process.env.LOG_LEVEL || 'info',
 
     // Q&A Agent: max context size to avoid token limit (300K model limit; ~4 chars/token)
-    // Default 1M chars ≈ 250K tokens, leaving room for system prompt, history, question, response
-    maxContextChars: parseInt(process.env.QA_MAX_CONTEXT_CHARS || '1000000', 10) || 1000000,
+    // Default 300K chars ≈ 75K tokens for context, leaving room for system prompt, history, question, response
+    maxContextChars: parseInt(process.env.QA_MAX_CONTEXT_CHARS || '300000', 10) || 300000,
 };
 
 export default config;

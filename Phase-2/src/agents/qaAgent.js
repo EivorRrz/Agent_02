@@ -367,8 +367,10 @@ INSTRUCTIONS:
             maxRetries: 0, // We handle retries ourselves
         });
 
-        // Convert conversation history to LangChain messages
-        const historyMessages = conversationHistory.map(msg => {
+        // Convert conversation history to LangChain messages (limit to last 10 = 5 Q&A pairs to avoid token overflow)
+        const MAX_HISTORY_MESSAGES = 10;
+        const recentHistory = Array.isArray(conversationHistory) ? conversationHistory.slice(-MAX_HISTORY_MESSAGES) : [];
+        const historyMessages = recentHistory.map(msg => {
             if (msg.role === "user") {
                 return new HumanMessage(msg.content);
             } else if (msg.role === "assistant") {
@@ -494,6 +496,8 @@ async function handleErrorStep(state) {
         } else {
             errorMessage = `Rate limit reached. Retrying in a moment... (Attempt ${retryCount + 1}/3)`;
         }
+    } else if (error?.message?.includes?.('maximum context length') || error?.message?.includes?.('reduce the length')) {
+        errorMessage = `The data model is too large for a single question. Try asking about a specific table or column (e.g. "Tell me about the orders table") instead of broad questions like "tell me everything". You can also set QA_MAX_CONTEXT_CHARS=200000 in .env to reduce context size.`;
     } else {
         errorMessage = `Error: ${error.message}. Please try rephrasing your question.`;
     }
